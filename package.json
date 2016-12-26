@@ -1,0 +1,20 @@
+{
+  "name": "ethereumjs-ipld-dump",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.1.4",
+    "end-of-stream": "^1.1.0",
+    "fs-pull-blob-store": "^0.4.1",
+    "ipfs": "github:ipfs/js-ipfs#feat/dag-api",
+    "ipfs-block": "^0.5.4",
+    "ipfs-block-service": "^0.8.0",
+    "ipld-eth-block": "^2.1.0"
+  }
+}
