@@ -11,10 +11,16 @@
   "dependencies": {
     "async": "^2.1.4",
     "end-of-stream": "^1.1.0",
+    "ethereumjs-blockchain": "^1.4.1",
+    "ethereumjs-rpc-sync": "^2.0.0",
+    "ethereumjs-util": "^5.0.1",
+    "ethereumjs-vm": "^2.0.2",
     "fs-pull-blob-store": "^0.4.1",
-    "ipfs": "github:ipfs/js-ipfs#feat/dag-api",
     "ipfs-block": "^0.5.4",
     "ipfs-block-service": "^0.8.0",
-    "ipld-eth-block": "^2.1.0"
+    "ipfs-repo": "^0.11.2",
+    "ipld-eth-block": "^2.1.0",
+    "js-ipld-eth-state-trie": "^1.0.1",
+    "level": "^1.5.0"
   }
 }
