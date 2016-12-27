@@ -1,9 +1,12 @@
 const pathUtil = require('path')
 const async = require('async')
 const onStreamEnd = require('end-of-stream')
-const leveldb = require('level')
+const levelUp = require('levelUp')
+const levelDown = require('leveldown')
+const LevelMiddlewareFactory = require('level-middleware')
 const ethUtil = require('ethereumjs-util')
 const VM = require('ethereumjs-vm')
+const RLP = require('rlp')
 const Blockchain = require('ethereumjs-blockchain')
 const syncVm = require('ethereumjs-rpc-sync')
 const EthSecureTrie = require('merkle-patricia-tree/secure.js')
@@ -14,22 +17,54 @@ const BlockService = require('ipfs-block-service')
 const IpfsBlock = require('ipfs-block')
 const IpldBlockResolver = require('ipld-eth-block')
 const IpldEthStateTrieResolver = require('js-ipld-eth-state-trie')
+const IpldDown = require('./ipld-down.js')
 
 
 // let repoPath = pathUtil.resolve('./ipfs')
 let repoPath = pathUtil.join(process.env.HOME, '/.jsipfs')
 let ipfsRepo = new IpfsRepo(repoPath, { stores: IpfsRepoStore })
 let blockService = new BlockService(ipfsRepo)
-let headBlockNumber = process.argv[2] ? parseInt(process.argv[2]) : 0
+let headBlockNumber = process.argv[2] && parseInt(process.argv[2])
 
+let nodeGets = 0
+let nodePuts = 0
 
-var stateDb = leveldb('./stateDb')
-var blockchainDb = leveldb('./blockchainDb')
-var iteratorDb = leveldb('./iteratorDb')
+let DbSpy = LevelMiddlewareFactory({
+  get: (key, cb) => {
+    nodeGets++
+    // console.log('db get:', key.toString('hex'))
+    cb(null, key)
+  },
+  put: (key, value, cb) => {
+    nodePuts++
+    // let trieNode = new EthTrieNode(RLP.decode(value))
+    // // console.log('db put value:', value)
+    // console.log('db put node:', trieNode.type)
+    // console.log('db put:', key)
+    // console.log('db put:', key.toString('hex').slice(0,4), '<-', value.toString('hex'))
+    cb(null, key, value)
+  }
+})
+// let stateDb = levelUp('./stateDb', { db: (loc) => DbSpy(levelDown(loc)) })
+let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ blockService })) })
+// let stateDb = levelUp('./stateDb', { db: levelDown })
+// let stateDb = levelUp('', { db: () => new IpldDown({ blockService }) })
+let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
+let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
-var stateTrie = new EthSecureTrie(stateDb)
-var blockchain = new Blockchain(blockchainDb, false)
-var vm = new VM({
+let stateTrie = new EthSecureTrie(stateDb)
+
+// stateTrie.put = (key, value, cb) => {
+//   console.log('trie.put -', key, value)
+//   EthSecureTrie.prototype.put.call(stateTrie, key, value, cb)
+// }
+// stateTrie.get = (key, opts, cb) => {
+//   console.log('trie.get -', key)
+//   EthSecureTrie.prototype.get.call(stateTrie, key, opts, cb)
+// }
+
+let blockchain = new Blockchain(blockchainDb, false)
+let vm = new VM({
   blockchain: blockchain,
   state: stateTrie,
 })
@@ -47,9 +82,11 @@ getHeadBlockNumber((err, startBlockNumber) => {
 
   syncVm(vm, { startBlock: startBlockNumber })
   setupStateRootChecking(vm)
+  setupLogging(vm)
   setupStateDumping(vm)
   setupHeadTracking(vm)
-  setupLogging(vm)
+
+  // setupDbLogging(vm)
 })
 
 function setupStateRootChecking(vm){
@@ -88,7 +125,7 @@ function setupStateDumping(vm){
       // put txReceiptTrie
       // - skip -
       // put stateTrie
-      (cb) => putStateTrie(vm.stateManager.trie, cb),
+      // (cb) => putStateTrie(vm.stateManager.trie, cb),
       // put updated storageTrie
       // (cb) => async.each(updatedAccounts, putAccountStorageTrie, cb),
     // ], done)
@@ -107,6 +144,17 @@ function setupHeadTracking(vm){
     lastBlock = block
     blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
     blockHash = ethUtil.bufferToHex(lastBlock.hash())
+
+    // if (blockNumber < 5) return done()
+    // let addr = new Buffer('3282791d6fd713f1e94f4bfd565eaa78b3a0599d', 'hex')
+    // console.log('stateTrie.get start')
+    // stateTrie.get(addr, (err, result) => {
+    //   console.log('stateTrie.get', err, result)
+    //   Account = require('ethereumjs-account')
+    //   let acc = new Account(result)
+    //   console.log('balance:', acc.balance)
+    //   process.exit()
+    // })
   })
   vm.on('afterBlock', function (results, done) {
     setHeadBlockNumber(blockNumber, done)
@@ -129,6 +177,24 @@ function setupLogging(vm){
   })
 }
 
+// setup DbLogging
+function setupDbLogging(vm){
+  let lastBlock, blockNumber, blockHash
+  vm.on('beforeBlock', function (block) {
+    lastBlock = block
+    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
+    blockHash = ethUtil.bufferToHex(lastBlock.hash())
+    console.log('gets:',nodeGets)
+    console.log('puts:',nodePuts)
+    nodeGets = 0
+    nodePuts = 0
+  })
+  vm.on('afterBlock', function (results) {
+    // console.log('gets:',nodeGets)
+    // console.log('puts:',nodePuts)
+  })
+}
+
 // ipld state dumpers
 
 function putBlock(ethBlock, cb){
@@ -141,17 +207,17 @@ function putBlock(ethBlock, cb){
   })
 }
 
-function putStateTrie(trie, cb){
-  let fullNodes = []
-  dumpTrieFullNodes(trie, fullNodes, (err) => {
-    async.eachLimit(fullNodes, 256, putStateTrieNode, function(){
-      console.log('redundantNodes:', redundantNodes)
-      console.log('totalNodes:', totalNodes)
-      console.log('newNodes:', totalNodes-redundantNodes)
-      cb.apply(null, arguments)
-    })
-  })
-}
+// function putStateTrie(trie, cb){
+//   let fullNodes = []
+//   dumpTrieFullNodes(trie, fullNodes, (err) => {
+//     async.eachLimit(fullNodes, 256, putStateTrieNode, function(){
+//       console.log('redundantNodes:', redundantNodes)
+//       console.log('totalNodes:', totalNodes)
+//       console.log('newNodes:', totalNodes-redundantNodes)
+//       cb.apply(null, arguments)
+//     })
+//   })
+// }
 
 function putStateTrieNode(trieNode, cb){
   let ipldObj = new IpfsBlock(trieNode.serialize())
