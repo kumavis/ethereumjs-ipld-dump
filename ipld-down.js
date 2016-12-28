@@ -8,22 +8,27 @@ const cidForHash = require('ipld-eth-trie/src/common').cidForHash
 module.exports = IpldDown
 
 function IpldDown(opts){
-  AbstractLevelDown.call(this, '')
-  this._blockService = opts.blockService
+  const self = this
+  AbstractLevelDown.call(self, '')
+  self._blockService = opts.blockService
+  self._codec = opts.codec
+  if (!self._blockService) throw new Error('No blockService')
+  if (!self._codec) throw new Error('No codec')
 }
 
 // our new prototype inherits from AbstractLevelDown
 util.inherits(IpldDown, AbstractLevelDown)
 
 IpldDown.prototype._put = function(key, value, opts, cb){
+  const self = this
   let ipldObj = new IpfsBlock(value)
-  let cid = cidForHash('eth-state-trie', key)
-  this._blockService.put({ block: ipldObj, cid: cid }, cb)
+  let cid = cidForHash(self._codec, key)
+  self._blockService.put({ block: ipldObj, cid: cid }, cb)
 }
 
 IpldDown.prototype._get = function(key, opts, cb){
   const self = this
-  let cid = cidForHash('eth-state-trie', key)
+  let cid = cidForHash(self._codec, key)
   async.waterfall([
     (cb) => self._blockService.get(cid, cb),
     (ipldBlock, cb) => cb(null, ipldBlock.data),

@@ -45,10 +45,8 @@ let DbSpy = LevelMiddlewareFactory({
     cb(null, key, value)
   }
 })
-// let stateDb = levelUp('./stateDb', { db: (loc) => DbSpy(levelDown(loc)) })
-let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ blockService })) })
-// let stateDb = levelUp('./stateDb', { db: levelDown })
-// let stateDb = levelUp('', { db: () => new IpldDown({ blockService }) })
+let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-state-trie', blockService })) })
+// let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
 let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
 let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
@@ -144,17 +142,6 @@ function setupHeadTracking(vm){
     lastBlock = block
     blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
     blockHash = ethUtil.bufferToHex(lastBlock.hash())
-
-    // if (blockNumber < 5) return done()
-    // let addr = new Buffer('3282791d6fd713f1e94f4bfd565eaa78b3a0599d', 'hex')
-    // console.log('stateTrie.get start')
-    // stateTrie.get(addr, (err, result) => {
-    //   console.log('stateTrie.get', err, result)
-    //   Account = require('ethereumjs-account')
-    //   let acc = new Account(result)
-    //   console.log('balance:', acc.balance)
-    //   process.exit()
-    // })
   })
   vm.on('afterBlock', function (results, done) {
     setHeadBlockNumber(blockNumber, done)
