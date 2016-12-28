@@ -45,8 +45,12 @@ let DbSpy = LevelMiddlewareFactory({
     cb(null, key, value)
   }
 })
+
 let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-state-trie', blockService })) })
+let storageDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-storage-trie', blockService })) })
+
 // let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
+// let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
 let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
 let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
@@ -66,6 +70,17 @@ let vm = new VM({
   blockchain: blockchain,
   state: stateTrie,
 })
+
+// setup account storage trie handling
+vm.stateManager._lookupStorageTrie = createAccountStorageTrie
+function createAccountStorageTrie (address, cb) {
+  vm.stateManager.getAccount(address, function (err, account) {
+    if (err) return cb(err)
+    let storageTrie = new EthSecureTrie(stateDb, root)
+    storageTrie.root = account.stateRoot
+    cb(null, storageTrie)
+  })
+}
 
 // stat counting
 let redundantNodes = 0
@@ -103,7 +118,8 @@ function setupStateRootChecking(vm){
   })
 }
 
-// current block tracking
+// dump chain data
+
 function setupStateDumping(vm){
   let lastBlock
   vm.on('beforeBlock', function (block) {
@@ -122,10 +138,6 @@ function setupStateDumping(vm){
       // - skip -
       // put txReceiptTrie
       // - skip -
-      // put stateTrie
-      // (cb) => putStateTrie(vm.stateManager.trie, cb),
-      // put updated storageTrie
-      // (cb) => async.each(updatedAccounts, putAccountStorageTrie, cb),
     // ], done)
     ], (err, results) => {
       if (err) throw err
@@ -136,19 +148,6 @@ function setupStateDumping(vm){
   })
 }
 
-function setupHeadTracking(vm){
-  let lastBlock, blockNumber, blockHash
-  vm.on('beforeBlock', function (block) {
-    lastBlock = block
-    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
-    blockHash = ethUtil.bufferToHex(lastBlock.hash())
-  })
-  vm.on('afterBlock', function (results, done) {
-    setHeadBlockNumber(blockNumber, done)
-  })
-}
-
-// setup logging
 function setupLogging(vm){
   let lastBlock, blockNumber, blockHash
   vm.on('beforeBlock', function (block) {
@@ -194,37 +193,18 @@ function putBlock(ethBlock, cb){
   })
 }
 
-// function putStateTrie(trie, cb){
-//   let fullNodes = []
-//   dumpTrieFullNodes(trie, fullNodes, (err) => {
-//     async.eachLimit(fullNodes, 256, putStateTrieNode, function(){
-//       console.log('redundantNodes:', redundantNodes)
-//       console.log('totalNodes:', totalNodes)
-//       console.log('newNodes:', totalNodes-redundantNodes)
-//       cb.apply(null, arguments)
-//     })
-//   })
-// }
+// head tracking
 
-function putStateTrieNode(trieNode, cb){
-  let ipldObj = new IpfsBlock(trieNode.serialize())
-  IpldEthStateTrieResolver.util.cid(trieNode, (err, cid) => {
-    // blockService.put({ block: ipldObj, cid: cid }, cb)
-    
-    async.waterfall([
-      (next) => blockService.get(cid, (err, result) => next(null, result)),
-      (block,next) => {
-        totalNodes++
-        if (block) redundantNodes++
-        next()
-      },
-      (next) => blockService.put({ block: ipldObj, cid: cid }, next),
-    ], cb)
+function setupHeadTracking(vm){
+  let lastBlock, blockNumber, blockHash
+  vm.on('beforeBlock', function (block) {
+    lastBlock = block
+    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
+    blockHash = ethUtil.bufferToHex(lastBlock.hash())
   })
-}
-
-function putAccountStorageTrie(account, cb){
-
+  vm.on('afterBlock', function (results, done) {
+    setHeadBlockNumber(blockNumber, done)
+  })
 }
 
 function getHeadBlockNumber(cb){
@@ -239,29 +219,4 @@ function setHeadBlockNumber(blockNumber, cb){
     if (err) return cb(err)
     cb()
   })
-}
-
-
-// util
-
-function dumpTrieFullNodes(trie, fullNodes, cb){
-  let inlineNodes = []
-  trie._walkTrie(trie.root, (root, node, key, walkController) => {
-    // skip inline nodes
-    if (contains(inlineNodes, node.raw)) return walkController.next()
-    fullNodes.push(node)
-    // check children for inline nodes
-    node.getChildren().forEach((child) => {
-      let value = child[1]
-      if (EthTrieNode.isRawNode(value)) {
-        inlineNodes.push(value)
-      }
-    })
-    // continue
-    walkController.next()
-  }, cb)
-}
-
-function contains(array, item) {
-  return array.indexOf(item) !== -1
 }
