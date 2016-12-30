@@ -32,7 +32,7 @@ let nodePuts = 0
 let DbSpy = LevelMiddlewareFactory({
   get: (key, cb) => {
     nodeGets++
-    // console.log('db get:', key.toString('hex'))
+    console.log('db get:', key.toString('hex'))
     cb(null, key)
   },
   put: (key, value, cb) => {
@@ -40,17 +40,18 @@ let DbSpy = LevelMiddlewareFactory({
     // let trieNode = new EthTrieNode(RLP.decode(value))
     // // console.log('db put value:', value)
     // console.log('db put node:', trieNode.type)
-    // console.log('db put:', key)
+    console.log('db put:', key)
     // console.log('db put:', key.toString('hex').slice(0,4), '<-', value.toString('hex'))
     cb(null, key, value)
   }
 })
 
-let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-state-trie', blockService })) })
-let storageDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-storage-trie', blockService })) })
+// let stateDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-state-trie', blockService })) })
+// let storageDb = levelUp('', { db: () => DbSpy(new IpldDown({ codec: 'eth-storage-trie', blockService })) })
+// let blockchainDb = levelUp('./blockchainDb', { db: (loc) => DbSpy(levelDown(loc)) })
 
-// let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
-// let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
+let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
+let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
 let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
 let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
@@ -102,6 +103,8 @@ getHeadBlockNumber((err, startBlockNumber) => {
   // setupDbLogging(vm)
 })
 
+// validation
+
 function setupStateRootChecking(vm){
   let lastBlock
   vm.on('beforeBlock', function (block) {
@@ -148,39 +151,6 @@ function setupStateDumping(vm){
   })
 }
 
-function setupLogging(vm){
-  let lastBlock, blockNumber, blockHash
-  vm.on('beforeBlock', function (block) {
-    lastBlock = block
-    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
-    blockHash = ethUtil.bufferToHex(lastBlock.hash())
-  })
-  vm.on('afterBlock', function (results) {
-    // var out = `#${blockNumber} ${blockHash} txs: ${results.receipts.length} root: ${ourStateRoot}`
-    var paddedBlockNumber = ('          ' + blockNumber).slice(-8)
-    var out = `#${paddedBlockNumber} ${blockHash} txs: ${results.receipts.length}`
-    console.log(out)
-  })
-}
-
-// setup DbLogging
-function setupDbLogging(vm){
-  let lastBlock, blockNumber, blockHash
-  vm.on('beforeBlock', function (block) {
-    lastBlock = block
-    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
-    blockHash = ethUtil.bufferToHex(lastBlock.hash())
-    console.log('gets:',nodeGets)
-    console.log('puts:',nodePuts)
-    nodeGets = 0
-    nodePuts = 0
-  })
-  vm.on('afterBlock', function (results) {
-    // console.log('gets:',nodeGets)
-    // console.log('puts:',nodePuts)
-  })
-}
-
 // ipld state dumpers
 
 function putBlock(ethBlock, cb){
@@ -218,5 +188,39 @@ function setHeadBlockNumber(blockNumber, cb){
   iteratorDb.put('head', blockNumber, function(err){
     if (err) return cb(err)
     cb()
+  })
+}
+
+// logging
+
+function setupLogging(vm){
+  let lastBlock, blockNumber, blockHash
+  vm.on('beforeBlock', function (block) {
+    lastBlock = block
+    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
+    blockHash = ethUtil.bufferToHex(lastBlock.hash())
+  })
+  vm.on('afterBlock', function (results) {
+    // var out = `#${blockNumber} ${blockHash} txs: ${results.receipts.length} root: ${ourStateRoot}`
+    var paddedBlockNumber = ('          ' + blockNumber).slice(-8)
+    var out = `#${paddedBlockNumber} ${blockHash} txs: ${results.receipts.length}`
+    console.log(out)
+  })
+}
+
+function setupDbLogging(vm){
+  let lastBlock, blockNumber, blockHash
+  vm.on('beforeBlock', function (block) {
+    lastBlock = block
+    blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
+    blockHash = ethUtil.bufferToHex(lastBlock.hash())
+    console.log('gets:',nodeGets)
+    console.log('puts:',nodePuts)
+    nodeGets = 0
+    nodePuts = 0
+  })
+  vm.on('afterBlock', function (results) {
+    // console.log('gets:',nodeGets)
+    // console.log('puts:',nodePuts)
   })
 }
