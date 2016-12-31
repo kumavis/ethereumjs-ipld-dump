@@ -19,7 +19,7 @@
     "ipfs-block": "^0.5.4",
     "ipfs-block-service": "^0.8.0",
     "ipfs-repo": "^0.11.2",
-    "ipld-eth-block": "^2.1.0",
+    "ipld-eth-block": "^2.2.1",
     "ipld-eth-state-trie": "^1.0.0",
     "js-ipld-eth-state-trie": "^1.0.1",
     "level-middleware": "^1.0.0",
