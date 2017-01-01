@@ -16,6 +16,7 @@ const IpfsRepoStore = require('fs-pull-blob-store')
 const BlockService = require('ipfs-block-service')
 const IpfsBlock = require('ipfs-block')
 const IpldBlockResolver = require('ipld-eth-block')
+const IpldBlockListResolver = require('ipld-eth-block-list')
 const IpldEthStateTrieResolver = require('js-ipld-eth-state-trie')
 const IpldDown = require('./ipld-down.js')
 
@@ -52,6 +53,7 @@ let DbSpy = LevelMiddlewareFactory({
 
 let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
 let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
+let blockDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-block', blockService }) })
 let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
 let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
@@ -66,7 +68,11 @@ let stateTrie = new EthSecureTrie(stateDb)
 //   EthSecureTrie.prototype.get.call(stateTrie, key, opts, cb)
 // }
 
-let blockchain = new Blockchain(blockchainDb, false)
+let blockchain = new Blockchain({
+  blockDb: blockDb,
+  detailsDb: blockchainDb,
+  validate: false,
+})
 let vm = new VM({
   blockchain: blockchain,
   state: stateTrie,
@@ -133,10 +139,8 @@ function setupStateDumping(vm){
   vm.on('afterBlock', function (results, done) {
     // console.log('dump block:', lastBlock.header)
     async.parallel([
-      // put block
-      (cb) => putBlock(lastBlock.header, cb),
-      // put uncles
-      // - skip -
+      // put ommers
+      (cb) => putOmmerList(lastBlock, cb),
       // put txTrie
       // - skip -
       // put txReceiptTrie
@@ -144,18 +148,22 @@ function setupStateDumping(vm){
     // ], done)
     ], (err, results) => {
       if (err) throw err
-      let blockCid = results[0]
-      console.log('blockCid:', blockCid.toBaseEncodedString())
+      // console.log('blockCid:', blockCid.toBaseEncodedString())
+      let ommerCid = results[0]
+      console.log('ommerCid:', ommerCid.toBaseEncodedString())
       done()
     })
   })
 }
 
-// ipld state dumpers
+// ipld eth chaindata dumpers
 
-function putBlock(ethBlock, cb){
-  let ipldObj = new IpfsBlock(ethBlock.serialize())
-  IpldBlockResolver.util.cid(ethBlock, (err, cid) => {
+function putOmmerList(ethBlock, cb){
+  let rawUncles = ethBlock.uncleHeaders.map((uncleHeader) => uncleHeader.raw)
+  let serialized = RLP.encode(rawUncles)
+  let ipldObj = new IpfsBlock(serialized)
+  IpldBlockListResolver.util.cid(rawUncles, (err, cid) => {
+    if (err) return cb(err)
     blockService.put({ block: ipldObj, cid: cid }, (err) => {
       if (err) return cb(err)
       cb(null, cid)
