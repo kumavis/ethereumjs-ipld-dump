@@ -1,5 +1,6 @@
 const pathUtil = require('path')
 const async = require('async')
+const now = require('performance-now')
 const onStreamEnd = require('end-of-stream')
 const levelUp = require('levelUp')
 const levelDown = require('leveldown')
@@ -80,13 +81,20 @@ let vm = new VM({
   state: stateTrie,
 })
 
+// let stepNumber = 0
+// vm.on('step', (step) => {
+//   stepNumber++
+//   // console.log(`[${stepNumber}], ${step.pc}, ${step.opcode.name}, ${step.gasLeft.toNumber()}, gasCost, ${step.depth}`)
+//   console.log(step.stack)
+//   console.log(`[${stepNumber}], ${step.pc}, ${step.opcode.name}, gasLeft, gasCost, ${step.depth}`)
+// })
+
 // setup account storage trie handling
 vm.stateManager._lookupStorageTrie = createAccountStorageTrie
 function createAccountStorageTrie (address, cb) {
   vm.stateManager.getAccount(address, function (err, account) {
     if (err) return cb(err)
-    let storageTrie = new EthSecureTrie(stateDb, root)
-    storageTrie.root = account.stateRoot
+    let storageTrie = new EthSecureTrie(stateDb, account.stateRoot)
     cb(null, storageTrie)
   })
 }
@@ -204,19 +212,26 @@ function setHeadBlockNumber(blockNumber, cb){
 
 // logging
 
+let startTime = now()
+let startBlockNumber
 function setupLogging(vm){
   let lastBlock, blockNumber, blockHash
   vm.on('beforeBlock', function (block) {
     lastBlock = block
     blockNumber = ethUtil.bufferToInt(lastBlock.header.number)
     blockHash = ethUtil.bufferToHex(lastBlock.hash())
-  })
-  vm.on('afterBlock', function (results) {
-    // var out = `#${blockNumber} ${blockHash} txs: ${results.receipts.length} root: ${ourStateRoot}`
     var paddedBlockNumber = ('          ' + blockNumber).slice(-8)
-    var out = `#${paddedBlockNumber} ${blockHash} txs: ${results.receipts.length}`
+    var out = `#${paddedBlockNumber} ${blockHash} txs: ${block.transactions.length}`
     console.log(out)
+    if (!startBlockNumber) startBlockNumber = blockNumber
+    let processedBlocks = blockNumber - startBlockNumber
+    let secondsElapsed = (now() - startTime)/1e3
+    let blockRate = processedBlocks / secondsElapsed
+    console.log(`${blockRate.toFixed(2)} blocks/sec`)
   })
+  // vm.on('afterBlock', function (results) {
+    
+  // })
 }
 
 function setupDbLogging(vm){
