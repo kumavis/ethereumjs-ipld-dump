@@ -66,7 +66,10 @@ getHeadBlockNumber((err, startBlockNumber) => {
   startBlockNumber = headBlockNumber !== undefined ? headBlockNumber : startBlockNumber
   console.log(`syncing from block #${startBlockNumber}`)
 
-  syncVm(vm, { startBlock: startBlockNumber })
+  syncVm(vm, {
+    startBlock: startBlockNumber,
+    rpcTarget: process.env.RPC_TARGET || 'http://localhost:8545'
+  })
   setupStateRootChecking(vm)
   setupLogging(vm)
   setupHeadTracking(vm)
