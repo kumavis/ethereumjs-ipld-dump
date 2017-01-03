@@ -19,6 +19,7 @@ const IpldBlockResolver = require('ipld-eth-block')
 const IpldBlockListResolver = require('ipld-eth-block-list')
 const IpldEthStateTrieResolver = require('js-ipld-eth-state-trie')
 const IpldDown = require('./ipld-down.js')
+const IpldEthBlockDown = require('./ipld-eth-block-down')
 
 
 // let repoPath = pathUtil.resolve('./ipfs')
@@ -53,7 +54,8 @@ let DbSpy = LevelMiddlewareFactory({
 
 let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
 let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
-let blockDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-block', blockService }) })
+// let blockDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-block', blockService }) })
+let blockDb = levelUp('', { db: () => new IpldEthBlockDown({ blockService }) })
 let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
 let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
 
@@ -137,22 +139,23 @@ function setupStateDumping(vm){
     totalNodes = 0
   })
   vm.on('afterBlock', function (results, done) {
+    done()
     // console.log('dump block:', lastBlock.header)
-    async.parallel([
-      // put ommers
-      (cb) => putOmmerList(lastBlock, cb),
-      // put txTrie
-      // - skip -
-      // put txReceiptTrie
-      // - skip -
-    // ], done)
-    ], (err, results) => {
-      if (err) throw err
-      // console.log('blockCid:', blockCid.toBaseEncodedString())
-      let ommerCid = results[0]
-      console.log('ommerCid:', ommerCid.toBaseEncodedString())
-      done()
-    })
+    // async.parallel([
+    //   // put ommers
+    //   (cb) => putOmmerList(lastBlock, cb),
+    //   // put txTrie
+    //   // - skip -
+    //   // put txReceiptTrie
+    //   // - skip -
+    // // ], done)
+    // ], (err, results) => {
+    //   if (err) throw err
+    //   // console.log('blockCid:', blockCid.toBaseEncodedString())
+    //   let ommerCid = results[0]
+    //   console.log('ommerCid:', ommerCid.toBaseEncodedString())
+    //   done()
+    // })
   })
 }
 

@@ -23,7 +23,10 @@ IpldDown.prototype._put = function(key, value, opts, cb){
   const self = this
   let ipldObj = new IpfsBlock(value)
   let cid = cidForHash(self._codec, key)
-  self._blockService.put({ block: ipldObj, cid: cid }, cb)
+  self._blockService.put({ block: ipldObj, cid: cid }, (err) => {
+    if (err) return cb(err)
+    cb(null, cid)
+  })
 }
 
 IpldDown.prototype._get = function(key, opts, cb){
