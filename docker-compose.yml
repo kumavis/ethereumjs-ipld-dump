@@ -4,8 +4,8 @@ ipld-state-dump:
   links:
     - parity
   volumes:
-    - /var/data/ipfs:/var/data/ipfs
-    - /var/data/sync:/var/data/sync
+    - /mnt/volume-sfo2-01/data/ipfs:/var/data/ipfs
+    - /mnt/volume-sfo2-01/data/sync:/var/data/sync
   environment:
     IPFS_REPO: "/var/data/ipfs"
     DB_ROOT: "/var/data/sync"
