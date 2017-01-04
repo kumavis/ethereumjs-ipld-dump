@@ -12,8 +12,8 @@ ipld-state-dump:
     RPC_TARGET: "http://parity:8545/"
 
 parity:
-  image: ethcore/parity:stable-release
+  image: ethcore/parity:beta-release
   restart: always
-  command: --rpc --rpcport "8545" --rpcaddr "all" --rpccorsdomain "*" --jsonrpc-hosts "all"
+  command: --rpcport "8545" --rpcaddr "all" --rpccorsdomain "*" --jsonrpc-hosts "all"
   ports:
     - "8545:8545"
