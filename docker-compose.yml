@@ -5,10 +5,15 @@ ipld-state-dump:
     - parity
   volumes:
     - /var/data/ipfs:/var/data/ipfs
+    - /var/data/sync:/var/data/sync
   environment:
-    - IPFS_REPO="/var/data/ipfs"
-    - RPC_TARGET="http://parity:8545"
+    IPFS_REPO: "/var/data/ipfs"
+    DB_ROOT: "/var/data/sync"
+    RPC_TARGET: "http://parity:8545/"
 
 parity:
   image: ethcore/parity:stable-release
   restart: always
+  command: --rpc --rpcport "8545" --rpcaddr "all" --rpccorsdomain "*" --jsonrpc-hosts "all"
+  ports:
+    - "8545:8545"

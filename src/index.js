@@ -8,17 +8,19 @@ const ethUtil = require('ethereumjs-util')
 const VM = require('ethereumjs-vm')
 const RLP = require('rlp')
 const Blockchain = require('ethereumjs-blockchain')
-const syncVm = require('ethereumjs-rpc-sync')
 const EthSecureTrie = require('merkle-patricia-tree/secure.js')
 const IpfsRepo = require('ipfs-repo')
 const IpfsRepoStore = require('fs-pull-blob-store')
 const BlockService = require('ipfs-block-service')
 const IpfsBlock = require('ipfs-block')
+const syncVm = require('ethereumjs-rpc-sync')
+const HttpProvider = require('ethjs-provider-http')
 const IpldDown = require('./ipld-down.js')
 const IpldEthBlockDown = require('./ipld-eth-block-down')
 
 
 let repoPath = process.env.IPFS_REPO || pathUtil.join(process.env.HOME, '/.jsipfs')
+let dbRoot = process.env.DB_ROOT || process.cwd()
 let ipfsRepo = new IpfsRepo(repoPath, { stores: IpfsRepoStore })
 let blockService = new BlockService(ipfsRepo)
 let headBlockNumber = process.argv[2] && parseInt(process.argv[2])
@@ -30,8 +32,8 @@ let nodePuts = 0
 let stateDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-state-trie', blockService }) })
 let storageDb = levelUp('', { db: () => new IpldDown({ codec: 'eth-storage-trie', blockService }) })
 let blockDb = levelUp('', { db: () => new IpldEthBlockDown({ blockService }) })
-let blockchainDb = levelUp('./blockchainDb', { db: levelDown })
-let iteratorDb = levelUp('./iteratorDb', { db: levelDown })
+let blockchainDb = levelUp(pathUtil.join(dbRoot, './blockchainDb'), { db: levelDown })
+let iteratorDb = levelUp(pathUtil.join(dbRoot, './iteratorDb'), { db: levelDown })
 
 let stateTrie = new EthSecureTrie(stateDb)
 
@@ -66,9 +68,11 @@ getHeadBlockNumber((err, startBlockNumber) => {
   startBlockNumber = headBlockNumber !== undefined ? headBlockNumber : startBlockNumber
   console.log(`syncing from block #${startBlockNumber}`)
 
+  console.log('rpc target:', process.env.RPC_TARGET || 'http://localhost:8545')
+  let provider = new HttpProvider(process.env.RPC_TARGET || 'http://localhost:8545')
   syncVm(vm, {
+    provider: provider,
     startBlock: startBlockNumber,
-    rpcTarget: process.env.RPC_TARGET || 'http://localhost:8545'
   })
   setupStateRootChecking(vm)
   setupLogging(vm)

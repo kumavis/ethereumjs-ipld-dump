@@ -16,4 +16,8 @@ COPY ./src /www/src
 RUN npm test
 
 # start server
+# CMD curl -X POST http://parity:8545
+# CMD cat /etc/hosts
+# CMD curl -X POST http://172.17.0.2:8545
+# CMD sleep infinity
 CMD npm start
