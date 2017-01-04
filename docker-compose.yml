@@ -1,0 +1,14 @@
+ipld-state-dump:
+  build: ./
+  restart: always
+  links:
+    - parity
+  volumes:
+    - /var/data/ipfs:/var/data/ipfs
+  environment:
+    - IPFS_REPO="/var/data/ipfs"
+    - RPC_TARGET="http://parity:8545"
+
+parity:
+  image: ethcore/parity:stable-release
+  restart: always

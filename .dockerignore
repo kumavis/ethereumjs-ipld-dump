@@ -1,0 +1,6 @@
+blockchainDb
+iteratorDb
+
+node_modules
+
+.git
