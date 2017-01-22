@@ -16,7 +16,7 @@
     "ethereumjs-rpc-sync": "^3.0.1",
     "ethereumjs-util": "^5.0.1",
     "ethereumjs-vm": "^2.0.2",
-    "ethjs-provider-http": "^0.1.4",
+    "ethjs-provider-http": "^0.1.6",
     "fs-pull-blob-store": "^0.4.1",
     "ipfs-block": "^0.5.4",
     "ipfs-block-service": "^0.8.0",
