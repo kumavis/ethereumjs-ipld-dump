@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "async": "^2.1.4",
-    "end-of-stream": "^1.1.0",
+    "end-of-stream": "^1.4.0",
     "ethereumjs-blockchain": "^2.0.0",
     "ethereumjs-rpc-sync": "^3.0.1",
     "ethereumjs-util": "^5.0.1",
