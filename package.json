@@ -27,7 +27,7 @@
     "js-ipld-eth-state-trie": "^1.0.1",
     "level-middleware": "^1.0.0",
     "leveldown": "^1.5.0",
-    "levelup": "^1.3.3",
+    "levelup": "^1.3.7",
     "performance-now": "^0.2.0",
     "rlp": "^2.0.0"
   }
