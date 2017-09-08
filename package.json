@@ -18,9 +18,9 @@
     "ethereumjs-vm": "^2.0.2",
     "ethjs-provider-http": "^0.1.4",
     "fs-pull-blob-store": "^0.4.1",
-    "ipfs-block": "^0.5.4",
-    "ipfs-block-service": "^0.8.0",
-    "ipfs-repo": "^0.11.2",
+    "ipfs-block": "^0.6.0",
+    "ipfs-block-service": "^0.12.0",
+    "ipfs-repo": "^0.17.0",
     "ipld-eth-block": "^2.1.0",
     "ipld-eth-block-list": "^1.0.0",
     "ipld-eth-state-trie": "^1.0.0",
@@ -28,7 +28,7 @@
     "level-middleware": "^1.0.0",
     "leveldown": "^1.5.0",
     "levelup": "^1.3.3",
-    "performance-now": "^0.2.0",
+    "performance-now": "^2.1.0",
     "rlp": "^2.0.0"
   }
 }
