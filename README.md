@@ -2,6 +2,8 @@ Uses millions and millions of inodes. So need to config machine a bit.
 
 ### create DigitalOcean block storage with extra inodes (120000000)
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/kumavis/ethereumjs-ipld-dump.svg)](https://greenkeeper.io/)
+
 sudo mkfs.ext4 -N 120000000 -F /dev/disk/by-id/scsi-0DO_Volume_volume-sfo2-01
 
 sudo mkdir -p /mnt/volume-sfo2-01
